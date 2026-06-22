@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'screens/main_screen.dart';
 
 void main() {
   runApp(const MainApp());
@@ -14,16 +15,38 @@ class MainApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         scaffoldBackgroundColor: Colors.black,
+
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: true,
+        ),
+
+        navigationBarTheme: const NavigationBarThemeData(
+          backgroundColor: const Color(0xFF111111),
+          indicatorColor: const Color(0xFF1E88E5),
+          labelTextStyle: WidgetStatePropertyAll(
+            TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+            ),
+          ),
+        ),
+
         textTheme: const TextTheme(
-          bodyMedium: TextStyle(color: Color.fromARGB(255, 82, 167, 233)),
-          bodyLarge: TextStyle(color: Color.fromARGB(255, 79, 144, 255))
+          bodyLarge: TextStyle(
+            color: Colors.white,
+            fontSize: 16
+          ),
+          bodyMedium: TextStyle(
+            color: Colors.white,
+            fontSize: 14
+          )
         )
       ),
-      home: Scaffold(
-        body: Center(
-          child: Text('Hello World!'),
-        ),
-      ),
+
+      home:MainScreen(), 
     );
   }
 }
