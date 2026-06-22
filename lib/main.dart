@@ -30,6 +30,7 @@ class MainApp extends StatelessWidget {
             TextStyle(
               color: Colors.white,
               fontSize: 12,
+              fontWeight: FontWeight.bold,
             ),
           ),
         ),

@@ -22,6 +22,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget{
 
           } ,
           icon: const Icon(Icons.settings), 
+          iconSize: 28,
         ),
       ],
     );

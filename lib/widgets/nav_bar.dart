@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class CustomNavBar extends StatelessWidget{
@@ -18,17 +17,17 @@ class CustomNavBar extends StatelessWidget{
       onDestinationSelected: onTap,
       destinations: const [
         NavigationDestination(
-          icon: Icon(Icons.home_outlined),
-          selectedIcon: Icon(Icons.home),
+          icon: Icon(Icons.home_outlined, color: Colors.white,),
+          selectedIcon: Icon(Icons.home), 
           label: 'Home',
         ),
         NavigationDestination(
-          icon: Icon(Icons.language_outlined),
+          icon: Icon(Icons.language_outlined, color: Colors.white,),
           selectedIcon: Icon(Icons.language),
           label: 'Browser',
         ),
         NavigationDestination(
-          icon: Icon(Icons.shield_outlined),
+          icon: Icon(Icons.shield_outlined, color: Colors.white,), 
           selectedIcon: Icon(Icons.shield),
           label: 'VPN',
         ),
