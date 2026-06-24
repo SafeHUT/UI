@@ -35,6 +35,10 @@ class MainApp extends StatelessWidget {
           ),
         ),
 
+        listTileTheme: const ListTileThemeData(
+          textColor: Colors.white,
+          iconColor: Colors.white
+        ),
         textTheme: const TextTheme(
           bodyLarge: TextStyle(
             color: Colors.white,
