@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:ui/screens/settings_screen.dart';
+import 'package:ui/screens/settings/settings_screen.dart';
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget{
   const CustomAppBar({super.key});
 
@@ -9,7 +9,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget{
       title: Text(
         'SafeHUT',
         style: TextStyle(
-          color: const Color(0xFF1E88E5),
+          color: Colors.blueAccent,
           fontWeight: FontWeight(700),
           fontStyle: FontStyle.italic,
           fontSize: 28

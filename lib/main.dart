@@ -23,22 +23,38 @@ class MainApp extends StatelessWidget {
           centerTitle: true,
         ),
 
+
         navigationBarTheme: const NavigationBarThemeData(
           backgroundColor: const Color(0xFF111111),
-          indicatorColor: const Color(0xFF1E88E5),
+          indicatorColor: Colors.blueAccent,
           labelTextStyle: WidgetStatePropertyAll(
             TextStyle(
               color: Colors.white,
               fontSize: 12,
               fontWeight: FontWeight.bold,
+              fontFamily: 'Courier'
             ),
           ),
         ),
 
-        listTileTheme: const ListTileThemeData(
-          textColor: Colors.white,
-          iconColor: Colors.white
+        listTileTheme: ListTileThemeData(
+          shape: Border(
+            bottom: BorderSide(color: Colors.grey.shade200, width: 1.0),
+            ),
+            titleTextStyle: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: Colors.blueAccent,
+            ),
+            subtitleTextStyle: const TextStyle(
+              fontSize: 13,
+              fontFamily: 'Courier', // Gives the token a subtle developer/code look
+              color: Colors.grey,
+            ),
+            iconColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
         ),
+
         textTheme: const TextTheme(
           bodyLarge: TextStyle(
             color: Colors.white,

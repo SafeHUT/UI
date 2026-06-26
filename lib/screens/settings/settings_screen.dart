@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:ui/models/user_model.dart';
-import 'package:ui/services/user_service.dart';
+import 'package:ui/data/user_demo_data.dart';
 
 class SettingsScreen extends StatelessWidget{
 
@@ -14,18 +13,10 @@ class SettingsScreen extends StatelessWidget{
       appBar: AppBar(
         title: const Text('Settings'),
       ),
-      body: FutureBuilder<UserModel>(
-        future: UserService().getCurrentUser(),
-        builder: (context, snapshot) {
-          print(snapshot.connectionState);
-          print(snapshot.data);
-          print(snapshot.error);
-
-          final user = snapshot.data;
-          return SingleChildScrollView(
+      body: SingleChildScrollView(
             child: Column(
               children: [
-                if(user != null ) ...[
+                if(demoUser != null ) ...[
                   const SizedBox(height: 32),
                     const CircleAvatar(
                       radius: 50,
@@ -38,7 +29,7 @@ class SettingsScreen extends StatelessWidget{
                     const SizedBox(height: 16),
 
                     Text(
-                      "ID: ${user.anonymousId}",
+                      "ID: ${demoUser?.anonymousId}",
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -48,7 +39,7 @@ class SettingsScreen extends StatelessWidget{
                     const SizedBox(height: 8,),
 
                     Text(
-                      "CreatedAt: ${user.createdAt}",
+                      "CreatedAt: ${demoUser?.createdAt}",
                       style: TextStyle(
                         color: Colors.grey,
                       ),
@@ -92,9 +83,7 @@ class SettingsScreen extends StatelessWidget{
                   ),
              ],
             ),
-          );
-        }
-      ),
-    );
+          )
+      );
   }
 }
