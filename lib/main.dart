@@ -23,7 +23,6 @@ class MainApp extends StatelessWidget {
           centerTitle: true,
         ),
 
-
         navigationBarTheme: const NavigationBarThemeData(
           backgroundColor: const Color(0xFF111111),
           indicatorColor: Colors.blueAccent,
