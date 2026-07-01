@@ -18,10 +18,8 @@ class HomeScreen extends StatelessWidget{
         ),
       );
     }
-    return Scaffold(
-      body: Center(
-        child: RoomsScreen(),
-      ), 
+    return const Scaffold(
+      body:  RoomsScreen(),
     floatingActionButton: ActionFab(),
     );
   }

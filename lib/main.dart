@@ -38,19 +38,19 @@ class MainApp extends StatelessWidget {
 
         listTileTheme: ListTileThemeData(
           shape: Border(
-            bottom: BorderSide(color: Colors.grey.shade200, width: 1.0),
+            bottom: BorderSide(color: Colors.grey.shade200, width: .5),
             ),
             titleTextStyle: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 18,
-              color: Colors.blueAccent,
+              color: Colors.white,
             ),
             subtitleTextStyle: const TextStyle(
               fontSize: 13,
               fontFamily: 'Courier', // Gives the token a subtle developer/code look
               color: Colors.grey,
             ),
-            iconColor: Colors.white,
+            iconColor: Colors.blueAccent,
           contentPadding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
         ),
 

@@ -94,7 +94,7 @@ class SettingsScreen extends StatelessWidget {
                 ],
               ),
 
-              const SizedBox(height: 40),
+              const SizedBox(height: 24),
 
               if (demoUser != null)
                 Padding(
@@ -156,7 +156,7 @@ class SettingsScreen extends StatelessWidget {
   }) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 24.0),
-      leading: Icon(icon, color: Colors.white),
+      leading: Icon(icon,),
       title: Text(title),
       trailing: const Icon(Icons.chevron_right, size: 22, color: Colors.white38),
       onTap: onTap,
