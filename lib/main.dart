@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 import 'screens/main_screen.dart';
+import 'services/api_service.dart';
 
-void main() {
+void main() async {
+
+  // Required when doing async work before runApp 
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await ApiService().loadSavedToken();
+
   runApp(const MainApp());
 }
 
@@ -24,7 +31,7 @@ class MainApp extends StatelessWidget {
         ),
 
         navigationBarTheme: const NavigationBarThemeData(
-          backgroundColor: const Color(0xFF111111),
+          backgroundColor: Color(0xFF111111),
           indicatorColor: Colors.blueAccent,
           labelTextStyle: WidgetStatePropertyAll(
             TextStyle(

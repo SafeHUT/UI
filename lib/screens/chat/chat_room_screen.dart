@@ -1,166 +1,209 @@
 import 'package:flutter/material.dart';
-import 'package:ui/data/user_demo_data.dart';
 import 'package:intl/intl.dart';
-import 'package:ui/models/rooms_model.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
+import '../../services/api_service.dart';
 
-class ChatRoomScreen extends StatefulWidget{
-  final RoomsModel room;
+class ChatRoomScreen extends StatefulWidget {
+  final Map<String, dynamic> room;
   const ChatRoomScreen({super.key, required this.room}); 
 
   @override
   State<ChatRoomScreen> createState() => _ChatRoomScreenState();
-
 }
+
 class _ChatRoomScreenState extends State<ChatRoomScreen> {
   final TextEditingController _messageController = TextEditingController(); 
-  final List<Map<String, dynamic>> _dbMessages = [
-    {
-      "id": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
-      "room_id": "room_1",
-      "user_id": "system_user",
-      "content": "Welcome to the room!",
-      "createdAt": DateTime.now().subtract(const Duration(minutes: 5)).toIso8601String()
-    },
-    {
-      "id": "b1ffbc99-9c0b-4ef8-bb6d-6bb9bd380a22",
-      "room_id": "room_1",
-      "user_id": "another_user_id", // Someone else
-      "content": "Hey everyone, what's up?",
-      "createdAt": DateTime.now().subtract(const Duration(minutes: 2)).toIso8601String()
-    },
-  ];
+  
+  IO.Socket? _socket;
+  List<dynamic> _messages = [];
+  bool _isLoading = true;
+  final String _currentUserId = ApiService().currentUser?['id'] ?? '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHistory();
+    _initSocket();
+  }
 
   @override  
   void dispose() {
     _messageController.dispose();
+    if (_socket != null) {
+      _socket!.emit('leave_room', widget.room['id']);
+      _socket!.disconnect();
+      _socket!.dispose();
+    }
     super.dispose();
+  }
+
+  Future<void> _loadHistory() async {
+    try {
+      final pastMessages = await ApiService().getRoomMessages(widget.room['id']);
+      if (mounted) {
+        setState(() {
+          _messages = pastMessages;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print("Failed to load history: $e");
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _initSocket() {
+    final String serverUrl = ApiService().baseUrl.replaceAll('/api/v1', '');
+    
+    _socket = IO.io(serverUrl, IO.OptionBuilder()
+      .setTransports(['websocket'])
+      .setAuth({'token': ApiService().currentToken}) // Authenticate!
+      .disableAutoConnect()
+      .build()
+    );
+
+    _socket!.connect();
+
+    _socket!.onConnect((_) {
+      print('Socket Connected');
+      _socket!.emit('join_room', widget.room['id']);
+    });
+
+    _socket!.on('receive_message', (data) {
+      if (mounted) {
+        setState(() {
+          // Insert at the beginning because our list is reversed (bottom-up)
+          _messages.insert(0, data); 
+        });
+      }
+    });
+
+    _socket!.on('room_error', (data) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data['message'])));
+    });
   }
 
   void _sendMessage() {
     final text = _messageController.text.trim();
-    if(text.isNotEmpty) {
-      setState(() {
-        _dbMessages.add({
-          "id": UniqueKey().toString(),
-          "room_id": "room1",
-          "user_id": demoUser?.anonymousId ?? "unknown",
-          "content": text,
-          "createdAt": DateTime.now().toIso8601String(),
-        });
+    if (text.isNotEmpty && _socket != null) {
+      // Send to server. We don't add to UI manually — we let the server bounce 
+      // it back via 'receive_message' so it has the official DB timestamp and ID.
+      _socket!.emit('send_message', {
+        'roomId': widget.room['id'],
+        'content': text,
       });
       _messageController.clear();
     }
   }
 
-  String _formatTime(String isoString) {
+  String _formatTime(String? isoString) {
+    if (isoString == null) return '';
     final DateTime dt = DateTime.parse(isoString).toLocal();
     return DateFormat('h:mm a').format(dt);
   }
 
   @override
   Widget build(BuildContext context) {
-    final roomTitle = widget.room.name.isEmpty  ? "Unnamed room": widget.room.name;
+    final roomName = widget.room['name']?.toString().isEmpty ?? true ? "Unnamed room" : widget.room['name'];
+    final roomToken = widget.room['token'] ?? widget.room['room_code'] ?? '';
 
     return Scaffold(
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-              Text(
-                roomTitle,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold
-                ),
-              ),
-              Text(
-              "Token: ${widget.room.token}",
-              style: const TextStyle(fontSize: 12, color: Colors.white54),
-            ),
+            Text(roomName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text("Token: $roomToken", style: const TextStyle(fontSize: 12, color: Colors.white54)),
           ],
         ),
       ),
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _dbMessages.length,
-              itemBuilder: ((context, index) {
-                final message = _dbMessages[index];
-                final isMe = message["user_id"] == demoUser?.anonymousId;
+            child: _isLoading 
+              ? const Center(child: CircularProgressIndicator(color: Colors.blueAccent))
+              : ListView.builder(
+                  reverse: true, // Builds from the bottom up! Index 0 is at the bottom.
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _messages.length,
+                  itemBuilder: ((context, index) {
+                    final message = _messages[index];
+                    final isMe = message['sender_id'] == _currentUserId;
+                    
+                    // Fallback for sender identity if anonymous_id isn't in the socket broadcast yet
+                    final senderDisplay = message['sender_anonymous_id'] ?? 'User'; 
 
-                return Align(
-                  alignment: isMe ? Alignment.centerRight: Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: isMe? Colors.blueAccent: const Color(0xFF1E1E1E),
-                      borderRadius: BorderRadius.only(
-                        topLeft: const Radius.circular(12),
-                        topRight: const Radius.circular(12),
-                        bottomLeft: Radius.circular(isMe ? 12 : 0),
-                        bottomRight: Radius.circular(isMe ? 0 : 12),
-                      ),
-                    ),
-                  child: Column(
-                    crossAxisAlignment: isMe ? CrossAxisAlignment.end: CrossAxisAlignment.start,
-                    children: [
-                      if(!isMe) 
-                        Text(
-                          "Anon-${message["user_id"].toString().substring(0, 4)}",
-                          style: const TextStyle(
-                            color: Colors.blueAccent,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
+                    return Align(
+                      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: isMe ? Colors.blueAccent : const Color(0xFF1E1E1E),
+                          borderRadius: BorderRadius.only(
+                            topLeft: const Radius.circular(12),
+                            topRight: const Radius.circular(12),
+                            bottomLeft: Radius.circular(isMe ? 12 : 0),
+                            bottomRight: Radius.circular(isMe ? 0 : 12),
                           ),
                         ),
-                      if(!isMe)
-                        const SizedBox(height: 2,),
-                      Text(
-                        message['content'],
-                        style: const TextStyle(color: Colors.white, fontSize: 15),
+                      child: Column(
+                        crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                        children: [
+                          if (!isMe) 
+                            Text(
+                              "Anon-${senderDisplay.toString().length >= 4 ? senderDisplay.toString().substring(0, 4) : senderDisplay}",
+                              style: const TextStyle(
+                                color: Colors.blueAccent,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          if (!isMe) const SizedBox(height: 2),
+                          Text(
+                            message['content'] ?? '',
+                            style: const TextStyle(color: Colors.white, fontSize: 15),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _formatTime(message['created_at'] ?? message['createdAt']),
+                            style: TextStyle(
+                              color: isMe ? Colors.white70 : Colors.white38, 
+                              fontSize: 10
+                            ),
+                          ),
+                        ],
                       ),
-
-                      const SizedBox(height: 4 ,),
-
-                      Text(
-                        _formatTime(message["createdAt"]),
-                        style: TextStyle(
-                          color: isMe ? Colors.white70 : Colors.white38, 
-                            fontSize: 10
-                        ),
-                      ),
-                    ],
-                  ),
-                  )
-                );
-              }),
-            ),
+                      )
+                    );
+                  }),
+                ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8) ,
-            color: Color(0xFF1E1E1E),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      hintText: "message...",
-                      hintStyle: TextStyle(color: Colors.white54),
-                      border: InputBorder.none ,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12)
-                    ),
-                  ) 
-                ),
-                IconButton(
-                  onPressed: _sendMessage , 
-                  icon: const Icon(Icons.send,color: Colors.blueAccent,)
-                )
-              ],
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            color: const Color(0xFF1E1E1E),
+            child: SafeArea(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _messageController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        hintText: "message...",
+                        hintStyle: TextStyle(color: Colors.white54),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12)
+                      ),
+                      onSubmitted: (_) => _sendMessage(),
+                    ) 
+                  ),
+                  IconButton(
+                    onPressed: _sendMessage, 
+                    icon: const Icon(Icons.send, color: Colors.blueAccent)
+                  )
+                ],
+              ),
             ),
           ),
         ],

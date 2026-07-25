@@ -1,9 +1,9 @@
 import 'dart:ui';
-
+import '../../services/api_service.dart';
 import 'package:flutter/material.dart';
 
 class JoinRoomDialog extends StatefulWidget{
-  JoinRoomDialog({super.key});
+  const JoinRoomDialog({super.key});
 
   @override
   State<JoinRoomDialog> createState() => _JoinRoomDialogState(); 
@@ -11,11 +11,37 @@ class JoinRoomDialog extends StatefulWidget{
 
 class _JoinRoomDialogState extends State<JoinRoomDialog> {
   final TextEditingController _tokenController = TextEditingController();
+  bool _isLoading = false;
 
   @override
   void dispose() {
+
     _tokenController.dispose(); //Prevent memory leaks
     super.dispose();
+
+  } 
+
+  void _joinRoom() async {
+
+    final token = _tokenController.text.trim();
+    if(token.isEmpty) return;
+
+    setState(() => _isLoading = true);
+    try {
+      
+      await ApiService().joinRoom(token);
+      if( !mounted ) return;
+      Navigator.pop(context, true); // passing 'true' so the ui knows to refresh the list
+    } catch (e) {
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid room code or room expired')),
+      );
+    } finally {
+
+      if( mounted ) setState(() => _isLoading = false);
+    }
+
   } 
 
   @override
@@ -39,23 +65,24 @@ class _JoinRoomDialogState extends State<JoinRoomDialog> {
           style: const TextStyle(
             color: Colors.white,
           ),
-            decoration: InputDecoration(
-              hintText: "Input room token...",
-              hintStyle: const TextStyle(
-                color: Colors.white54
-              ),
-              filled: true,
-              fillColor: const Color(0xFF1E1E1E),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none
-              ),
-              contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16)
+          textCapitalization: TextCapitalization.characters,
+          decoration: InputDecoration(
+            hintText: "Input room token...",
+            hintStyle: const TextStyle(
+              color: Colors.white54
             ),
+            filled: true,
+            fillColor: const Color(0xFF1E1E1E),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none
+            ),
+            contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16)
+          ),
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => _isLoading ? null : () => Navigator.pop(context),
           child: const Text(
             "Cancel", 
             style: TextStyle(
@@ -64,15 +91,7 @@ class _JoinRoomDialogState extends State<JoinRoomDialog> {
           ), 
         ),
         ElevatedButton(
-          onPressed: () {
-            final token = _tokenController.text.trim();
-            if(token.isNotEmpty) {
-              Navigator.pop(context);
-              // ToDo: logic
-
-            print("Joining room ${token}");
-            }
-          },
+          onPressed: _isLoading ? null: _joinRoom,
           style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blueAccent,
               foregroundColor: Colors.white,
@@ -80,12 +99,9 @@ class _JoinRoomDialogState extends State<JoinRoomDialog> {
                 borderRadius: BorderRadius.circular(8)
               ),
           ),
-          child: const Text(
-            'join',
-            style: TextStyle(
-              color: Colors.white 
-            ),
-          ),
+          child: _isLoading 
+          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2,),) 
+          : const Text('join'),
         ),
       ],
     ),
