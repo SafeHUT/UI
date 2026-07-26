@@ -72,7 +72,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     _socket!.on('receive_message', (data) {
       if (mounted) {
         setState(() {
-          // Insert at the beginning because our list is reversed (bottom-up)
           _messages.insert(0, data); 
         });
       }
@@ -86,8 +85,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   void _sendMessage() {
     final text = _messageController.text.trim();
     if (text.isNotEmpty && _socket != null) {
-      // Send to server. We don't add to UI manually — we let the server bounce 
-      // it back via 'receive_message' so it has the official DB timestamp and ID.
       _socket!.emit('send_message', {
         'roomId': widget.room['id'],
         'content': text,
@@ -123,15 +120,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             child: _isLoading 
               ? const Center(child: CircularProgressIndicator(color: Colors.blueAccent))
               : ListView.builder(
-                  reverse: true, // Builds from the bottom up! Index 0 is at the bottom.
+                  reverse: true, 
                   padding: const EdgeInsets.all(16),
                   itemCount: _messages.length,
                   itemBuilder: ((context, index) {
                     final message = _messages[index];
                     final isMe = message['sender_id'] == _currentUserId;
                     
-                    // Fallback for sender identity if anonymous_id isn't in the socket broadcast yet
-                    final senderDisplay = message['sender_anonymous_id'] ?? 'User'; 
+                    final senderDisplay = message['sender_name'] ?? "Anon-${message['sender_anonymous_id']?.toString().substring(0,4) ?? 'User'}"; 
 
                     return Align(
                       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,

@@ -82,6 +82,15 @@ class ApiService {
       currentUser = null;
     }
 
+    // update user name
+    Future <void> updateDisplayName(String name) async {
+
+      final response = await dio.patch("/user/name", data: {
+        "name": name,
+      });
+      currentUser = response.data['data'];
+    }
+
     // create new room 
     Future <Map<String, dynamic>> createRoom({
       String expiresIn = "1d"
@@ -115,11 +124,11 @@ class ApiService {
     
     String? get currentToken => _accessToken;
     Future <List<dynamic>> getRoomMessages(String roomId, {int page = 1}) async {
-      final response = await dio.get("/rooms/$roomId/messages", queryParameters: {
+      final response = await dio.get("/room/$roomId/messages", queryParameters: {
         'page':page,
         'limit': 50,
       });
-      return response.data['data']['messages'];
+      return response.data['data']['messages'] ?? [];
 
     }
 }
