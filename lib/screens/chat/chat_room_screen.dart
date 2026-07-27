@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import '../../services/api_service.dart';
+import 'room_details_screen.dart';
 
 class ChatRoomScreen extends StatefulWidget {
   final Map<String, dynamic> room;
@@ -106,13 +107,21 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(roomName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            Text("Token: $roomToken", style: const TextStyle(fontSize: 12, color: Colors.white54)),
-          ],
-        ),
+        title:InkWell(
+          onTap: () {
+            Navigator.push(
+              context, 
+              MaterialPageRoute(builder: (_) => RoomDetailsScreen(room: widget.room))
+            );
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(roomName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Text("Token: $roomToken", style: const TextStyle(fontSize: 12, color: Colors.white54)),
+            ],
+          ),
+        )
       ),
       body: Column(
         children: [

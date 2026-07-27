@@ -44,9 +44,6 @@ class MainApp extends StatelessWidget {
         ),
 
         listTileTheme: ListTileThemeData(
-          shape: Border(
-            bottom: BorderSide(color: Colors.grey.shade200, width: .5),
-            ),
             titleTextStyle: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 18,

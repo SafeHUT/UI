@@ -113,6 +113,11 @@ class ApiService {
 
     }
 
+    // leave room 
+    Future <void> leaveRoom(String roomId) async {
+      await dio.delete('/room/$roomId/leave');
+    }
+
     // Fetch all room of current user
 
     Future <List<dynamic>> getMyRooms() async {
