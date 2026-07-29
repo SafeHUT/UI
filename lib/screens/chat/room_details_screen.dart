@@ -11,6 +11,72 @@ class RoomDetailsScreen extends StatefulWidget {
 
 class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
   bool _isLeaving = false;
+  late Map<String, dynamic> _roomData;
+
+  @override 
+  void initState() {
+    super.initState();
+    _roomData = Map<String, dynamic>.from(widget.room);
+  }
+  void _showEditNameDialog() {
+
+    final TextEditingController nameController = TextEditingController(
+      text: _roomData['name'] ?? ''
+    );
+
+    showDialog(
+      context: context, 
+      builder:(context) => AlertDialog(
+       backgroundColor: const Color(0xFF121212), 
+       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+       title: const Text('Edit Room Name', style: TextStyle(color: Colors.white),),
+       content: TextField(
+        controller: nameController,
+        style: TextStyle(color: Colors.white),
+        textCapitalization: TextCapitalization.words,
+        decoration: InputDecoration(
+          hintText: "Enter room name...",
+          hintStyle: const TextStyle(color:Colors.white54),
+          filled: true,
+          fillColor: const Color(0xFF1E1E1E),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none), 
+        ),
+       ),
+       actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text("Cancel", style: TextStyle(color: Colors.white54),),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blueAccent,
+            foregroundColor: Colors.white
+          ),
+          onPressed: () async {
+            final newName = nameController.text.trim();
+            if( newName.isNotEmpty ) {
+              try{
+                await ApiService().updateRoomName(widget.room['id'], newName);
+                if(context.mounted) {
+                  Navigator.pop(context);
+                  setState(() {
+                    _roomData['name'] = newName; 
+                  });
+                }
+              } catch(e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("Failed to update room name"))
+                );
+              }
+            }
+          },
+          child: const Text("Save"), 
+        ),
+       ],
+      )
+
+    );
+  }
 
   void _leaveRoom() async {
     final confirm = await showDialog<bool>(
@@ -88,7 +154,6 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
                 
                 const SizedBox(height: 32),
                 
-                // --- SETTINGS SECTION ---
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                   child: Text("SETTINGS", style: TextStyle(color: Colors.blueAccent, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
@@ -98,9 +163,7 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
                   leading: const Icon(Icons.edit),
                   title: const Text("Change Room Name"),
                   trailing: const Icon(Icons.chevron_right, color: Colors.white38),
-                  onTap: () {
-                    // TODO: Implement changing room name
-                  },
+                  onTap: _showEditNameDialog,
                 ),
                 ListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 24),

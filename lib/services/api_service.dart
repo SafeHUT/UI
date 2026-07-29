@@ -118,6 +118,12 @@ class ApiService {
       await dio.delete('/room/$roomId/leave');
     }
 
+    // update room name
+    Future <void> updateRoomName(String roomId, String name) async {
+      await dio.patch('/room/$roomId/name', data: {
+        "name": name
+      });
+    }
     // Fetch all room of current user
 
     Future <List<dynamic>> getMyRooms() async {
