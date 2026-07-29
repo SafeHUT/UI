@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import '../../services/api_service.dart';
 import 'room_details_screen.dart';
+import 'dart:async';
 
 class ChatRoomScreen extends StatefulWidget {
   final Map<String, dynamic> room;
@@ -14,6 +15,9 @@ class ChatRoomScreen extends StatefulWidget {
 
 class _ChatRoomScreenState extends State<ChatRoomScreen> {
   final TextEditingController _messageController = TextEditingController(); 
+  Timer? _typingTimer;
+  bool _isMeTyping = false;
+  bool _isSomeoneElseTyping = false;
   
   IO.Socket? _socket;
   List<dynamic> _messages = [];
@@ -22,13 +26,36 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
   @override
   void initState() {
+    
     super.initState();
+    
     _loadHistory();
     _initSocket();
   }
 
+  void _onTextChanged(String text) {
+    if (text.isNotEmpty) {
+      if (!_isMeTyping && _socket != null) {
+        _isMeTyping = true;
+        _socket!.emit('typing', widget.room['id']);
+      }
+      
+      _typingTimer?.cancel();
+      _typingTimer = Timer(const Duration(seconds: 2), () {
+        _isMeTyping = false;
+        _socket?.emit('stop_typing', widget.room['id']);
+      });
+    } else {
+      if (_isMeTyping && _socket != null) {
+        _isMeTyping = false;
+        _typingTimer?.cancel();
+        _socket!.emit('stop_typing', widget.room['id']);
+      }
+    }
+  }
   @override  
   void dispose() {
+    _typingTimer?.cancel();
     _messageController.dispose();
     if (_socket != null) {
       _socket!.emit('leave_room', widget.room['id']);
@@ -81,6 +108,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     _socket!.on('room_error', (data) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data['message'])));
     });
+
+    _socket!.on('user_typing', (_) {
+      if (mounted) setState(() => _isSomeoneElseTyping = true);
+    });
+
+    _socket!.on('user_stopped_typing', (_) {
+      if (mounted) setState(() => _isSomeoneElseTyping = false);
+    });
   }
 
   void _sendMessage() {
@@ -91,6 +126,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         'content': text,
       });
       _messageController.clear();
+      if (_isMeTyping) {
+        _isMeTyping = false;
+        _typingTimer?.cancel();
+        _socket!.emit('stop_typing', widget.room['id']);
+      }
     }
   }
 
@@ -184,6 +224,21 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                   }),
                 ),
           ),
+          if (_isSomeoneElseTyping)
+            const Padding(
+              padding: EdgeInsets.only(left: 24, bottom: 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  "Someone is typing...", 
+                  style: TextStyle(
+                    color: Colors.blueAccent, 
+                    fontSize: 12, 
+                    fontStyle: FontStyle.italic
+                  )
+                ),
+              ),
+            ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             color: const Color(0xFF1E1E1E),
@@ -193,6 +248,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                   Expanded(
                     child: TextField(
                       controller: _messageController,
+                      onChanged: _onTextChanged,
                       style: const TextStyle(color: Colors.white),
                       decoration: const InputDecoration(
                         hintText: "message...",

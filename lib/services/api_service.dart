@@ -130,6 +130,13 @@ class ApiService {
         "name": name
       });
     }
+
+    // Notification mute for specific room
+    Future<void> toggleRoomMute(String roomId, bool isMuted) async {
+      await dio.patch('/room/$roomId/mute', data: {
+        "isMuted": isMuted,
+      });
+    }
     // Fetch all room of current user
 
     Future <List<dynamic>> getMyRooms() async {

@@ -13,11 +13,13 @@ class RoomDetailsScreen extends StatefulWidget {
 class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
   bool _isLeaving = false;
   late Map<String, dynamic> _roomData;
+  late bool _isMuted;
 
   @override 
   void initState() {
     super.initState();
     _roomData = Map<String, dynamic>.from(widget.room);
+    _isMuted = _roomData['is_muted'] == true;
   }
   void _showEditNameDialog() {
 
@@ -185,13 +187,27 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
                 ),
                 ListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 24),
-                  leading: const Icon(Icons.notifications_none),
+                  leading: Icon(
+                    _isMuted ? Icons.notifications_off : Icons.notifications_none,
+                  ),
                   title: const Text("Mute Notifications"),
                   trailing: Switch(
-                    value: false, 
+                    value: _isMuted, 
                     activeThumbColor: Colors.blueAccent,
-                    onChanged: (val) {
-                      // TODO: Implement mute
+                    onChanged: (val) async {
+                      setState(() => _isMuted = val);
+                      try {
+
+                        await ApiService().toggleRoomMute(_roomData['id'], val);
+                        _roomData['is_muted'] = val;
+                      }catch (e) {
+                        if (mounted) {
+                          setState(() => _isMuted = !val);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Failed to update settings"))
+                          );
+                        }
+                      }
                     }
                   ),
                 ),
