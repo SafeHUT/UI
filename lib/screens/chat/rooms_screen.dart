@@ -10,7 +10,6 @@ class RoomsScreen extends StatefulWidget{
 }
 
 class _RoomScreenState extends State<RoomsScreen> {
-
   late Future<List<dynamic>> _roomsFuture;
 
   @override 
@@ -55,11 +54,14 @@ class _RoomScreenState extends State<RoomsScreen> {
           }, 
           child: ListView.builder(
             itemCount: rooms.length,
-            padding: EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(vertical: 8),
             itemBuilder: (context, index) {
               final room = rooms[index];
               final token = room['token'] ?? '';
               final name = room['name'] ?? '';
+              
+              // 1. EXTRACT THE UNREAD COUNT (sent by our new SQL query)
+              final unreadCount = int.tryParse(room['unread_count']?.toString() ?? '0') ?? 0;
               
               return ListTile(
                 leading: const CircleAvatar(
@@ -71,7 +73,22 @@ class _RoomScreenState extends State<RoomsScreen> {
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
                 ),
                 subtitle: Text("Token: $token", style: const TextStyle(color: Colors.grey),),
-                trailing: const Icon(Icons.chevron_right, color: Colors.white30,),
+                
+                // 2. SHOW RED BADGE IF UNREAD > 0, OTHERWISE SHOW NORMAL ICON
+                trailing: unreadCount > 0
+                    ? Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: Colors.redAccent,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          unreadCount > 99 ? '99+' : unreadCount.toString(),
+                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                      )
+                    : const Icon(Icons.chevron_right, color: Colors.white30),
+                    
                 onTap: () async {
                   await Navigator.push(
                     context,

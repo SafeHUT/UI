@@ -28,7 +28,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   void initState() {
     
     super.initState();
-    
+    ApiService().markRoomAsRead(widget.room['id']); 
     _loadHistory();
     _initSocket();
   }

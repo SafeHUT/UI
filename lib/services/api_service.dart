@@ -131,6 +131,15 @@ class ApiService {
       });
     }
 
+    // messages mark as read
+    Future<void> markRoomAsRead(String roomId) async {
+      try {
+        await dio.patch('/room/$roomId/read');
+      } catch (e) {
+        print("Failed to mark as read: $e");
+      }
+    }
+
     // Notification mute for specific room
     Future<void> toggleRoomMute(String roomId, bool isMuted) async {
       await dio.patch('/room/$roomId/mute', data: {
