@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ui/screens/chat/room_members.dart';
 import '../../services/api_service.dart';
 
 class RoomDetailsScreen extends StatefulWidget {
@@ -171,7 +172,15 @@ class _RoomDetailsScreenState extends State<RoomDetailsScreen> {
                   title: const Text("View Members"),
                   trailing: const Icon(Icons.chevron_right, color: Colors.white38),
                   onTap: () {
-                    // TODO: Implement viewing members
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => RoomMembersScreen(
+                          roomId: _roomData['id'], 
+                          roomName: roomName,
+                        ),
+                      ),
+                    );
                   },
                 ),
                 ListTile(
