@@ -33,6 +33,82 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     _initSocket();
   }
 
+  void _showMessageOptions(Map<String, dynamic> message) {
+    showModalBottomSheet(
+      context: context, 
+      backgroundColor: const Color(0xFF121212),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit, color: Colors.blueAccent),
+              title: const Text("Edit Message", style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(context);
+                _showEditDialog(message);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete, color: Colors.redAccent),
+              title: const Text("Delete Message", style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(context);
+                _socket!.emit('delete_message', {
+                  'messageId': message['id'],
+                  'roomId': widget.room['id'],
+                });
+              },
+            ),
+          ],
+        ),
+      )
+    );
+  }
+
+  void _showEditDialog(Map<String, dynamic> message) {
+    final TextEditingController editController = TextEditingController(text: message['content']);
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF121212),
+        title: const Text("Edit Message", style: TextStyle(color: Colors.white)),
+        content: TextField(
+          controller: editController,
+          style: const TextStyle(color: Colors.white),
+          autofocus: true,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: const Color(0xFF1E1E1E),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel", style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
+            onPressed: () {
+              if (editController.text.trim().isNotEmpty) {
+                _socket!.emit('edit_message', {
+                  'messageId': message['id'],
+                  'roomId': widget.room['id'],
+                  'newContent': editController.text.trim(),
+                });
+                Navigator.pop(context);
+              }
+            },
+            child: const Text("Save", style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _onTextChanged(String text) {
     if (text.isNotEmpty) {
       if (!_isMeTyping && _socket != null) {
@@ -85,7 +161,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     
     _socket = IO.io(serverUrl, IO.OptionBuilder()
       .setTransports(['websocket'])
-      .setAuth({'token': ApiService().currentToken}) // Authenticate!
+      .setAuth({'token': ApiService().currentToken}) 
       .disableAutoConnect()
       .build()
     );
@@ -115,6 +191,25 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
     _socket!.on('user_stopped_typing', (_) {
       if (mounted) setState(() => _isSomeoneElseTyping = false);
+    });
+
+    _socket!.on('message_deleted',(messageId) {
+      if( mounted ) {
+        setState(() {
+          _messages.removeWhere( (msg) => msg['id'] == messageId);
+        });
+      }
+    });
+
+    _socket!.on('message_edited', (updatedMsg) {
+      if (mounted) {
+        setState(() {
+          final index = _messages.indexWhere((msg) => msg['id'] == updatedMsg['id']);
+          if (index != -1) {
+            _messages[index]['content'] = updatedMsg['content'];
+          }
+        });
+      }
     });
   }
 
@@ -180,45 +275,48 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
                     return Align(
                       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(vertical: 4),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: isMe ? Colors.blueAccent : const Color(0xFF1E1E1E),
-                          borderRadius: BorderRadius.only(
-                            topLeft: const Radius.circular(12),
-                            topRight: const Radius.circular(12),
-                            bottomLeft: Radius.circular(isMe ? 12 : 0),
-                            bottomRight: Radius.circular(isMe ? 0 : 12),
+                      child:GestureDetector(
+                        onLongPress: isMe ? () => _showMessageOptions(message): null, 
+                        child:Container(
+                          margin: const EdgeInsets.symmetric(vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: isMe ? Colors.blueAccent : const Color(0xFF1E1E1E),
+                            borderRadius: BorderRadius.only(
+                              topLeft: const Radius.circular(12),
+                              topRight: const Radius.circular(12),
+                              bottomLeft: Radius.circular(isMe ? 12 : 0),
+                              bottomRight: Radius.circular(isMe ? 0 : 12),
+                            ),
                           ),
-                        ),
-                      child: Column(
-                        crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                        children: [
-                          if (!isMe) 
+                        child: Column(
+                          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                          children: [
+                            if (!isMe) 
+                              Text(
+                                "Anon-${senderDisplay.toString().length >= 4 ? senderDisplay.toString().substring(0, 4) : senderDisplay}",
+                                style: const TextStyle(
+                                  color: Colors.blueAccent,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            if (!isMe) const SizedBox(height: 2),
                             Text(
-                              "Anon-${senderDisplay.toString().length >= 4 ? senderDisplay.toString().substring(0, 4) : senderDisplay}",
-                              style: const TextStyle(
-                                color: Colors.blueAccent,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
+                              message['content'] ?? '',
+                              style: const TextStyle(color: Colors.white, fontSize: 15),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _formatTime(message['created_at'] ?? message['createdAt']),
+                              style: TextStyle(
+                                color: isMe ? Colors.white70 : Colors.white38, 
+                                fontSize: 10
                               ),
                             ),
-                          if (!isMe) const SizedBox(height: 2),
-                          Text(
-                            message['content'] ?? '',
-                            style: const TextStyle(color: Colors.white, fontSize: 15),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _formatTime(message['created_at'] ?? message['createdAt']),
-                            style: TextStyle(
-                              color: isMe ? Colors.white70 : Colors.white38, 
-                              fontSize: 10
-                            ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
+                      )
                       )
                     );
                   }),
