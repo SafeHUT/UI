@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:ui/screens/settings/about_screen.dart';
+import 'package:ui/screens/settings/security_screen.dart';
+import 'package:ui/screens/settings/theme_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../services/api_service.dart';
-import 'notification_screen.dart';
+import 'notifications_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -70,7 +74,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
       )
     );
   }
-
+  Future<void> _handleDonate() async {
+    final Uri url = Uri.parse('https://www.google.com/');
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Could not open donation page")),
+        );
+      }
+    }
+  }
   void _handleLogout() async {
     await ApiService().logout();
     if(mounted) {
@@ -156,15 +169,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 title:"Preferences",
                 children: [
                   _buildListTile(
-                    icon: Icons.thumb_up_alt_sharp, 
-                    title: "Donate to SafeHUT", 
-                    onTap: () {} 
-                  ),
-                  _buildListTile(
                     icon: Icons.security,
                     title: "Security",
                     onTap: () {
-                      // TODO: Navigate to security screen
+                      Navigator.push(context, 
+                        MaterialPageRoute(builder: (context) => const SecurityScreen()) 
+                      );
                     },
                   ),
                   _buildListTile(
@@ -174,7 +184,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const NotificationScreen(),
+                          builder: (context) => const NotificationsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildListTile(
+                    icon: Icons.palette_outlined,
+                    title: "Appearance",
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ThemeScreen(),
                         ),
                       );
                     },
@@ -183,8 +205,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: Icons.info_outline,
                     title: "About",
                     onTap: () {
-                      // TODO: Navigate to about screen
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const AboutScreen()),
+                      );
                     },
+                  ),
+                  _buildListTile(
+                    icon: Icons.favorite_border,
+                    title: "Donate to SafeHUT",
+                    onTap: _handleDonate, // Triggers the browser!
                   ),
                 ] 
               ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import '../../services/api_service.dart';
 import 'room_details_screen.dart';
@@ -15,6 +16,11 @@ class ChatRoomScreen extends StatefulWidget {
 
 class _ChatRoomScreenState extends State<ChatRoomScreen> {
   final TextEditingController _messageController = TextEditingController(); 
+  Color _myBubbleColor = Colors.blueAccent;
+  // expire counter
+  Timer? _countDownTimer;
+  String _timeLeft = '';
+  // typing show
   Timer? _typingTimer;
   bool _isMeTyping = false;
   bool _isSomeoneElseTyping = false;
@@ -29,8 +35,56 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     
     super.initState();
     ApiService().markRoomAsRead(widget.room['id']); 
+    _calculateTimeLeft();
+    _countDownTimer = Timer.periodic(const Duration(minutes: 1),(_) {
+      _calculateTimeLeft();
+    });
+    _loadThemeColor();
     _loadHistory();
     _initSocket();
+  }
+  Future<void> _loadThemeColor() async {
+    final prefs = await SharedPreferences.getInstance();
+    final colorName = prefs.getString('app_accent_color') ?? 'Blue';
+    
+    final Map<String, Color> colorMap = {
+      'Blue': Colors.blueAccent,
+      'Purple': Colors.purpleAccent,
+      'Green': Colors.greenAccent,
+      'Orange': Colors.orangeAccent,
+      'Red': Colors.redAccent,
+    };
+
+    if (mounted) {
+      setState(() {
+        _myBubbleColor = colorMap[colorName] ?? Colors.blueAccent;
+      });
+    }
+  }
+  void _calculateTimeLeft() {
+
+    if( widget.room['expires_at'] == null ) return;
+
+    final expiresAt = DateTime.parse(widget.room['expires_at']).toLocal();
+    final difference = expiresAt.difference(DateTime.now());
+
+    if (mounted) {
+      setState(() {
+        if (difference.isNegative) {
+          _timeLeft = "Expired";
+          // Optional: You could even trigger Navigator.pop(context) here to auto-kick them!
+        } else {
+          final hours = difference.inHours;
+          final minutes = difference.inMinutes.remainder(60);
+          
+          if (hours > 0) {
+            _timeLeft = "${hours}h ${minutes}m left";
+          } else {
+            _timeLeft = "${minutes}m left"; // Only show minutes if under an hour
+          }
+        }
+      });
+    }
   }
 
   void _showMessageOptions(Map<String, dynamic> message) {
@@ -131,6 +185,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   }
   @override  
   void dispose() {
+    _countDownTimer?.cancel();
     _typingTimer?.cancel();
     _messageController.dispose();
     if (_socket != null) {
@@ -254,6 +309,19 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             children: [
               Text(roomName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               Text("Token: $roomToken", style: const TextStyle(fontSize: 12, color: Colors.white54)),
+              const SizedBox(width: 8),
+                  if (_timeLeft.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.redAccent.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        _timeLeft,
+                        style: const TextStyle(fontSize: 10, color: Colors.redAccent, fontWeight: FontWeight.bold),
+                      ),
+                    ),
             ],
           ),
         )

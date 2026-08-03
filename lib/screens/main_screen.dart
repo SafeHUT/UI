@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ui/auth/app_lock_wrapper.dart';
 import 'package:ui/screens/browser/browse_screen.dart';
 import 'package:ui/screens/chat/home_screen.dart';
 import 'package:ui/screens/vpn/vpn_screen.dart';
@@ -22,19 +23,21 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const CustomAppBar(),
-      body: IndexedStack(
-        index: selectedIndex,
-        children: pages,
-      ),
-      bottomNavigationBar: CustomNavBar(
-        currentIndex: selectedIndex,
-        onTap: (index) {
-          setState(() {
-            selectedIndex = index;
-          });
-        } 
+    return AppLockWrapper(
+      child: Scaffold(
+        appBar: const CustomAppBar(),
+        body: IndexedStack(
+          index: selectedIndex,
+          children: pages,
+        ),
+        bottomNavigationBar: CustomNavBar(
+          currentIndex: selectedIndex,
+          onTap: (index) {
+            setState(() {
+              selectedIndex = index;
+            });
+          } 
+        ),
       ),
     );
   }
