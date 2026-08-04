@@ -70,8 +70,8 @@ class _RoomScreenState extends State<RoomsScreen> {
                 final unreadCount = int.tryParse(room['unread_count']?.toString() ?? '0') ?? 0;
                 
                 return ListTile(
-                  leading: const CircleAvatar(
-                    backgroundColor: Colors.blueAccent,
+                  leading: CircleAvatar(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
                     child: Icon(Icons.tag, color: Colors.white,),
                   ),
                   title: Text(

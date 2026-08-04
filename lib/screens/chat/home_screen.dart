@@ -13,6 +13,21 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
 
   bool _isLoading = false;
+  bool _isInitializing = true;
+
+  void initState() {
+    super.initState();
+    _checkExistingUser();
+  }
+  void _checkExistingUser() async {
+    await ApiService().loadSavedToken(); 
+    
+    if (mounted) {
+      setState(() {
+        _isInitializing = false; 
+      });
+    }
+  }
 
   void _generateUser() async {
 
@@ -21,7 +36,6 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
 
       await ApiService().generateNewUser();
-      // Calling setState triggers a rebuild
       setState(() {});
 
     } catch (e) {
@@ -35,15 +49,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override  
   Widget build(BuildContext context) {
+    if (_isInitializing) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(), 
+        ),
+      );
+    }
     if( ApiService().currentUser == null ) {
       return Scaffold(
         body: Center(
-          child: _isLoading ? const CircularProgressIndicator(
-            color: Colors.blueAccent,
-          ) 
+          child: _isLoading ? const CircularProgressIndicator() 
           : ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blueAccent,
+              backgroundColor: Theme.of(context).colorScheme.primary, 
               foregroundColor: Colors.white
             ),
             onPressed: _generateUser, 

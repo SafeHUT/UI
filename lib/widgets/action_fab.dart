@@ -213,7 +213,7 @@ class ActionFab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FloatingActionButton(
-      backgroundColor: Colors.blueAccent, 
+      backgroundColor: Theme.of(context).colorScheme.primary, 
       foregroundColor: Colors.white,
       onPressed: () => _showActions(context),
       child: const Icon(Icons.add),

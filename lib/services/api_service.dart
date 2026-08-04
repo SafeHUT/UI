@@ -22,7 +22,6 @@ class ApiService {
                 receiveTimeout: const Duration(seconds: 10),
             ),
         );
-        // The Interceptor: automatically attaches the token to every request
         dio.interceptors.add(InterceptorsWrapper( onRequest:(options, handler) {
                 if(_accessToken != null) {
                     options.headers['Authorization'] = 'Bearer $_accessToken';

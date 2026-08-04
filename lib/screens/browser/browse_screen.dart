@@ -69,6 +69,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
       ),
       action: ContentBlockerAction(
         type: ContentBlockerActionType.CSS_DISPLAY_NONE,
+        selector: ".ad, .ads, .ad-banner, .advertisement",
       ),
     ));
 

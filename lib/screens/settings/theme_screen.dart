@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../theme_notifier.dart';
 
 class ThemeScreen extends StatefulWidget{
 
@@ -13,6 +13,15 @@ class ThemeScreen extends StatefulWidget{
 class _ThemeScreenState extends State<ThemeScreen> {
   
   String _selectedColorName = 'Blue';
+
+  Future _saveTheme(String colorName) async {
+    setState(() => _selectedColorName = colorName);
+  
+    appColorNotifier.value = _availableColors[colorName] ?? Colors.blueAccent;
+  
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('app_accent_color', colorName);
+  }
 
   final Map<String, Color> _availableColors = {
     'Blue': Colors.blueAccent,
@@ -33,21 +42,6 @@ class _ThemeScreenState extends State<ThemeScreen> {
       setState(() {
         _selectedColorName = prefs.getString('app_accent_color') ?? 'Blue';
       });
-    }
-  }
-  Future<void> _saveTheme(String colorName) async {
-    setState(() => _selectedColorName = colorName);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('app_accent_color', colorName);
-    
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("$colorName theme applied!"),
-          backgroundColor: _availableColors[colorName],
-          duration: const Duration(seconds: 2),
-        ),
-      );
     }
   }
 

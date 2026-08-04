@@ -351,7 +351,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                           margin: const EdgeInsets.symmetric(vertical: 4),
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                           decoration: BoxDecoration(
-                            color: isMe ? Colors.blueAccent : const Color(0xFF1E1E1E),
+                            color: isMe ? Theme.of(context).colorScheme.primary: const Color(0xFF1E1E1E),
                             borderRadius: BorderRadius.only(
                               topLeft: const Radius.circular(12),
                               topRight: const Radius.circular(12),
