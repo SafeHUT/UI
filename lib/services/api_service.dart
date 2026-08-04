@@ -55,6 +55,33 @@ class ApiService {
       return false;
     }
 
+   Future<void> refreshAnonymousId() async {
+      try {
+        final response = await dio.patch('/user/refresh-id');
+        final data = response.data['data']; 
+        
+        currentUser = data['user']; 
+        _accessToken = data['accessToken'];
+        
+        await _storage.write(key: 'jwt_token', value: _accessToken);
+        
+      } catch (e) {
+        print("Error refreshing UID: $e");
+        rethrow;
+      }
+    }
+
+    Future<void> destroyAccount() async {
+      try {
+        await dio.delete('/user/current-user'); 
+      } catch (e) {
+        print("Error destroying account on server: $e");
+        rethrow;
+      } finally {
+        await logout(); 
+      }
+    }
+
     // generate UID 
     Future <void> generateNewUser() async {
       try {

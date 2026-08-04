@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ui/screens/main_screen.dart';
 import 'package:ui/screens/settings/about_screen.dart';
 import 'package:ui/screens/settings/security_screen.dart';
 import 'package:ui/screens/settings/theme_screen.dart';
@@ -87,8 +88,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _handleLogout() async {
     await ApiService().logout();
     if(mounted) {
-      Navigator.of(context).popUntil((route) => route.isFirst);
-      setState((){});
+      Navigator.of(context, rootNavigator: true).pop();
+                
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const MainScreen()), 
+        (route) => false,
+      );
     }
   }
   @override

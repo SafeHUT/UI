@@ -1,110 +1,113 @@
-import 'dart:ui';
-import '../../services/api_service.dart';
 import 'package:flutter/material.dart';
+import '../../services/api_service.dart'; 
 
-class JoinRoomDialog extends StatefulWidget{
+class JoinRoomDialog extends StatefulWidget {
   const JoinRoomDialog({super.key});
 
   @override
-  State<JoinRoomDialog> createState() => _JoinRoomDialogState(); 
+  State<JoinRoomDialog> createState() => _JoinRoomDialogState();
 }
 
 class _JoinRoomDialogState extends State<JoinRoomDialog> {
-  final TextEditingController _tokenController = TextEditingController();
+  final TextEditingController _codeController = TextEditingController();
   bool _isLoading = false;
+
+  Future<void> _joinRoom() async {
+    final code = _codeController.text.trim();
+    
+    if (code.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter a valid room token.")),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      await ApiService().joinRoom(code);
+      
+      if (mounted) {
+        Navigator.pop(context, true); 
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Successfully joined the room!")),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Failed to join room. Check the token and try again."),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   void dispose() {
-
-    _tokenController.dispose(); //Prevent memory leaks
+    _codeController.dispose();
     super.dispose();
-
-  } 
-
-  void _joinRoom() async {
-
-    final token = _tokenController.text.trim();
-    if(token.isEmpty) return;
-
-    setState(() => _isLoading = true);
-    try {
-      
-      await ApiService().joinRoom(token);
-      if( !mounted ) return;
-      Navigator.pop(context, true); // passing 'true' so the ui knows to refresh the list
-    } catch (e) {
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid room code or room expired')),
-      );
-    } finally {
-
-      if( mounted ) setState(() => _isLoading = false);
-    }
-
-  } 
+  }
 
   @override
   Widget build(BuildContext context) {
-    return BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0),
-      child: AlertDialog(
-        backgroundColor: const Color(0xFF121212),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: const Text(
-          "Join room",
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
+    return AlertDialog(
+      backgroundColor: const Color(0xFF1E1E1E), 
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Text("Join Room", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            "Enter the room token provided by the creator to join the conversation.",
+            style: TextStyle(color: Colors.white70, fontSize: 14),
           ),
-        ),
-        content: TextField(
-          controller: _tokenController,
-          style: const TextStyle(
-            color: Colors.white,
-          ),
-          textCapitalization: TextCapitalization.characters,
-          decoration: InputDecoration(
-            hintText: "Input room token...",
-            hintStyle: const TextStyle(
-              color: Colors.white54
+          const SizedBox(height: 16),
+          TextField(
+            controller: _codeController,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: "e.g., a8f9b2...",
+              hintStyle: const TextStyle(color: Colors.white30),
+              filled: true,
+              fillColor: const Color(0xFF121212),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Theme.of(context).primaryColor),
+              ),
             ),
-            filled: true,
-            fillColor: const Color(0xFF1E1E1E),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none
-            ),
-            contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16)
           ),
+        ],
       ),
       actions: [
         TextButton(
-          onPressed: () => _isLoading ? null : () => Navigator.pop(context),
-          child: const Text(
-            "Cancel", 
-            style: TextStyle(
-              color: Colors.white54
-            )
-          ), 
+          onPressed: _isLoading ? null : () => Navigator.pop(context, false),
+          child: const Text("Cancel", style: TextStyle(color: Colors.white54)),
         ),
         ElevatedButton(
-          onPressed: _isLoading ? null: _joinRoom,
           style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blueAccent,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8)
-              ),
+            backgroundColor: Theme.of(context).primaryColor,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
-          child: _isLoading 
-          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2,),) 
-          : const Text('join'),
+          onPressed: _isLoading ? null : _joinRoom,
+          child: _isLoading
+              ? const SizedBox(
+                  height: 20, 
+                  width: 20, 
+                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                )
+              : const Text("Join", style: TextStyle(fontWeight: FontWeight.bold)),
         ),
       ],
-    ),
     );
   }
 }

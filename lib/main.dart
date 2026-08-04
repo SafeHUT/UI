@@ -51,7 +51,7 @@ class MainApp extends StatelessWidget {
             ),
             subtitleTextStyle: const TextStyle(
               fontSize: 13,
-              fontFamily: 'Courier', // Gives the token a subtle developer/code look
+              fontFamily: 'Courier',
               color: Colors.grey,
             ),
             iconColor: Colors.blueAccent,
