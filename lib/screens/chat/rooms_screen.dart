@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ui/widgets/action_fab.dart';
 import 'chat_room_screen.dart';
 import '../../services/api_service.dart';
 
@@ -26,81 +27,86 @@ class _RoomScreenState extends State<RoomsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<dynamic>>(
-      future: _roomsFuture, 
-      builder: (context, snapshot) {
-        if( snapshot.connectionState == ConnectionState.waiting ) {
-          return const Center( child: CircularProgressIndicator(color: Colors.blueAccent,),);
-        } 
-
-        if (snapshot.hasError) {
-          return const Center(child: Text("Failed to load rooms", style: TextStyle(color: Colors.redAccent)));
-        }
+    return Scaffold(
+      backgroundColor: Colors.transparent, 
       
-        final rooms = snapshot.data ?? [];
+      floatingActionButton: ActionFab(
+        onRefresh: _fetchRooms, 
+      ),
+      body: FutureBuilder<List<dynamic>>(
+        future: _roomsFuture, 
+        builder: (context, snapshot) {
+          if( snapshot.connectionState == ConnectionState.waiting ) {
+            return const Center( child: CircularProgressIndicator(color: Colors.blueAccent,),);
+          } 
 
-        if (rooms.isEmpty) {
-          return const Center(
-            child: Text("No rooms joined yet", style: TextStyle(color: Colors.white54, fontSize: 16)),
-          );
-        }
+          if (snapshot.hasError) {
+            return const Center(child: Text("Failed to load rooms", style: TextStyle(color: Colors.redAccent)));
+          }
+        
+          final rooms = snapshot.data ?? [];
 
-        return RefreshIndicator(
-          color: Colors.blueAccent,
-          backgroundColor: const Color(0xFF1E1E1E),
-          onRefresh: () async {
-            _fetchRooms();
-            await _roomsFuture;
-          }, 
-          child: ListView.builder(
-            itemCount: rooms.length,
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemBuilder: (context, index) {
-              final room = rooms[index];
-              final token = room['token'] ?? '';
-              final name = room['name'] ?? '';
-              
-              // 1. EXTRACT THE UNREAD COUNT (sent by our new SQL query)
-              final unreadCount = int.tryParse(room['unread_count']?.toString() ?? '0') ?? 0;
-              
-              return ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: Colors.blueAccent,
-                  child: Icon(Icons.tag, color: Colors.white,),
-                ),
-                title: Text(
-                  name.isEmpty ? "Unnamed room" : name,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
-                ),
-                subtitle: Text("Token: $token", style: const TextStyle(color: Colors.grey),),
+          if (rooms.isEmpty) {
+            return const Center(
+              child: Text("No rooms joined yet", style: TextStyle(color: Colors.white54, fontSize: 16)),
+            );
+          }
+
+          return RefreshIndicator(
+            color: Colors.blueAccent,
+            backgroundColor: const Color(0xFF1E1E1E),
+            onRefresh: () async {
+              _fetchRooms();
+              await _roomsFuture;
+            }, 
+            child: ListView.builder(
+              itemCount: rooms.length,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemBuilder: (context, index) {
+                final room = rooms[index];
+                final token = room['token'] ?? '';
+                final name = room['name'] ?? '';
                 
-                // 2. SHOW RED BADGE IF UNREAD > 0, OTHERWISE SHOW NORMAL ICON
-                trailing: unreadCount > 0
-                    ? Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                          color: Colors.redAccent,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Text(
-                          unreadCount > 99 ? '99+' : unreadCount.toString(),
-                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                        ),
-                      )
-                    : const Icon(Icons.chevron_right, color: Colors.white30),
-                    
-                onTap: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => ChatRoomScreen(room: room)) 
-                  );
-                  _fetchRooms();
-                },
-              );
-            }
-          ), 
-        );
-      } 
+                final unreadCount = int.tryParse(room['unread_count']?.toString() ?? '0') ?? 0;
+                
+                return ListTile(
+                  leading: const CircleAvatar(
+                    backgroundColor: Colors.blueAccent,
+                    child: Icon(Icons.tag, color: Colors.white,),
+                  ),
+                  title: Text(
+                    name.isEmpty ? "Unnamed room" : name,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
+                  ),
+                  subtitle: Text("Token: $token", style: const TextStyle(color: Colors.grey),),
+                  
+                  trailing: unreadCount > 0
+                      ? Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: const BoxDecoration(
+                            color: Colors.redAccent,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            unreadCount > 99 ? '99+' : unreadCount.toString(),
+                            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
+                        )
+                      : const Icon(Icons.chevron_right, color: Colors.white30),
+                      
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => ChatRoomScreen(room: room)) 
+                    );
+                    _fetchRooms();
+                  },
+                );
+              }
+            ), 
+          );
+        } 
+      ),
     );
   }
 }

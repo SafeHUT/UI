@@ -3,7 +3,8 @@ import 'package:ui/screens/chat/create_room_dialog.dart';
 import 'package:ui/screens/chat/join_room_dialog.dart';
 
 class ActionFab extends StatelessWidget{
-  const ActionFab({super.key});
+  final VoidCallback onRefresh;
+  const ActionFab({super.key, required this.onRefresh});
 
   void _showActions(BuildContext context) {
     showModalBottomSheet(
@@ -36,13 +37,15 @@ class ActionFab extends StatelessWidget{
                 title: const Text(
                   "Create room",
                 ),
-                onTap: () {
+                onTap: () async {
                   Navigator.pop(context);
-                  showDialog(
+                  final didCreate = await showDialog<bool>(
                     context: context, 
-                    barrierColor: Colors.black.withValues(alpha:0.4),
-                    builder:(context) => const CreateRoomDialog(), 
+                    builder: (context) => const CreateRoomDialog(), 
                   );
+                  if(didCreate == true) {
+                    onRefresh();
+                  }
                 },
               ),
               ListTile(

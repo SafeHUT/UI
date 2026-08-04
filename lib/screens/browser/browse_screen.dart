@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ui/models/bookmark.dart';
 
 class BrowseScreen extends StatefulWidget {
-  const BrowseScreen({super.key});
+  final String? initialUrl; 
+  const BrowseScreen({super.key, this.initialUrl});
 
   @override
   State<BrowseScreen> createState() => _BrowseScreenState();
@@ -66,12 +69,116 @@ class _BrowseScreenState extends State<BrowseScreen> {
       ),
       action: ContentBlockerAction(
         type: ContentBlockerActionType.CSS_DISPLAY_NONE,
-        selector: ".ad, .ads, .advert, .banner, .ad-container, [id*='ad-'], [class*='ad-']",
       ),
     ));
 
     return blockers;
   }
+
+  Future<void> _showBookmarks() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? bookmarksString = prefs.getString('saved_bookmarks');
+    List<Bookmark> bookmarks = [];
+    
+    if (bookmarksString != null && bookmarksString.isNotEmpty) {
+      bookmarks = Bookmark.decode(bookmarksString);
+    }
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E1E1E),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text("Private Bookmarks", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              ),
+              if (bookmarks.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(32.0),
+                  child: Text("No bookmarks saved yet.", style: TextStyle(color: Colors.white54)),
+                )
+              else
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: bookmarks.length,
+                    itemBuilder: (context, index) {
+                      final bookmark = bookmarks[index];
+                      return ListTile(
+                        leading: const Icon(Icons.public, color: Colors.blueAccent),
+                        title: Text(bookmark.title, style: const TextStyle(color: Colors.white), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        subtitle: Text(bookmark.url, style: const TextStyle(color: Colors.white54), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                          onPressed: () async {
+                            // Delete logic
+                            bookmarks.removeAt(index);
+                            await prefs.setString('saved_bookmarks', Bookmark.encode(bookmarks));
+                            if (context.mounted) Navigator.pop(context); 
+                            _showBookmarks(); 
+                          },
+                        ),
+                        onTap: () {
+                          Navigator.pop(context);
+                          webViewController?.loadUrl(urlRequest: URLRequest(url: WebUri(bookmark.url)));
+                        },
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _saveBookmark() async {
+    final currentUrl = await webViewController?.getUrl();
+    final currentTitle = await webViewController?.getTitle();
+
+    if (currentUrl == null || currentUrl.toString().isEmpty) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    
+    final String? bookmarksString = prefs.getString('saved_bookmarks');
+    List<Bookmark> bookmarks = [];
+    
+    if (bookmarksString != null && bookmarksString.isNotEmpty) {
+      bookmarks = Bookmark.decode(bookmarksString);
+    }
+
+    final urlString = currentUrl.toString();
+    if (bookmarks.any((b) => b.url == urlString)) {
+       if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(
+           const SnackBar(content: Text("Already bookmarked!")),
+         );
+       }
+       return;
+    }
+
+    bookmarks.add(Bookmark(
+      title: currentTitle ?? urlString, 
+      url: urlString
+    ));
+    
+    await prefs.setString('saved_bookmarks', Bookmark.encode(bookmarks));
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Bookmark saved privately.")),
+      );
+    }
+  }
+
   void _onSearchSubmit(String query) {
     if (query.isEmpty) return;
     
@@ -114,11 +221,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               suffixIcon: IconButton(
                 icon: const Icon(Icons.bookmark_border, color: Colors.white54, size: 20),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Bookmark feature coming soon!")),
-                  );
-                },
+                onPressed: _saveBookmark,
               ),
             ),
           ),
@@ -134,6 +237,10 @@ class _BrowseScreenState extends State<BrowseScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.bookmarks, size: 20, color: Colors.blueAccent),
+            onPressed: _showBookmarks, 
+          ),
           IconButton(
             icon: const Icon(Icons.arrow_forward_ios, size: 18),
             color: canGoForward ? Colors.white : Colors.white30,
@@ -159,7 +266,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
             child: InAppWebView(
               key: webViewKey,
               initialSettings: settings,
-              initialUrlRequest: URLRequest(url: WebUri("https://duckduckgo.com")),
+              initialUrlRequest: URLRequest(url: WebUri(widget.initialUrl ?? "https://duckduckgo.com")),
               onWebViewCreated: (controller) {
                 webViewController = controller;
               },

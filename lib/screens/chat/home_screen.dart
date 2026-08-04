@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:ui/screens/chat/rooms_screen.dart';
-import 'package:ui/widgets/action_fab.dart';
 import '../../services/api_service.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -56,7 +55,6 @@ class _HomeScreenState extends State<HomeScreen> {
     
     return const Scaffold(
       body: RoomsScreen(),
-      floatingActionButton: ActionFab(),
     );
   }
 }

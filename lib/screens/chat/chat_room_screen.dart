@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_linkify/flutter_linkify.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:ui/screens/browser/browse_screen.dart';
 import '../../services/api_service.dart';
 import 'room_details_screen.dart';
 import 'dart:async';
@@ -370,10 +372,28 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                                 ),
                               ),
                             if (!isMe) const SizedBox(height: 2),
-                            Text(
-                              message['content'] ?? '',
-                              style: const TextStyle(color: Colors.white, fontSize: 15),
+                          Linkify(
+                            onOpen: (link) {
+                              // Push the private browser on top of the chat room
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => BrowseScreen(initialUrl: link.url),
+                                ),
+                              );
+                            },
+                            text: message['content'],
+                            style: TextStyle(
+                              color: isMe ? Colors.white : Colors.white70,
+                              fontSize: 16,
                             ),
+                            linkStyle: const TextStyle(
+                              color: Colors.blueAccent, 
+                              decoration: TextDecoration.underline,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            options: const LinkifyOptions(humanize: false),
+                          ),
                             const SizedBox(height: 4),
                             Text(
                               _formatTime(message['created_at'] ?? message['createdAt']),
