@@ -38,7 +38,7 @@ class AboutScreen extends StatelessWidget {
             // App Name & Version
             const Text("SafeHUT", style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            const Text("Version 1.0.0", style: TextStyle(color: Colors.white54, fontSize: 14)),
+            const Text("Private Beta", style: TextStyle(color: Colors.blueAccent, fontSize: 14, fontWeight: FontWeight.bold)),
             
             const SizedBox(height: 32),
             
@@ -46,13 +46,13 @@ class AboutScreen extends StatelessWidget {
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 40),
               child: Text(
-                "A secure, self-destructing platform designed to keep your conversations entirely private. No permanent records, no compromises.",
+                "A privacy first platform featuring self destructing conversations and an integrated secure browser. Built to leave no permanent records and no compromises.",
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.white70, height: 1.5),
               ),
             ),
             
-            const SizedBox(height: 48),
+            const SizedBox(height: 28),
             
             // Developer Credit
             const Text("DEVELOPED BY", style: TextStyle(color: Colors.white30, fontSize: 12, letterSpacing: 1.5)),
@@ -61,7 +61,7 @@ class AboutScreen extends StatelessWidget {
               onTap: () => _launchURL('https://github.com/may-ank-dot'),
               borderRadius: BorderRadius.circular(8),
               child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 child: Text(
                   "Mayank Swaraj", 
                   style: TextStyle(color: Colors.blueAccent, fontSize: 18, fontWeight: FontWeight.bold),

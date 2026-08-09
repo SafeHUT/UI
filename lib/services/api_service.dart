@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:ui/services/crypto_service.dart';
 
 class ApiService {
 
@@ -84,21 +85,32 @@ class ApiService {
     // generate UID 
     Future <void> generateNewUser() async {
       try {
+        final keys = await CryptoService.generateKeyPair();
+        final publicKey = keys['publicKey']!; 
+        final privateKey = keys['privateKey']!;
+        
+        final response = await dio.post('/user',data: {
+          'publicKey': publicKey
+        });
 
-        final response = await dio.post('/user');
         final data = response.data['data'];
         
         _accessToken = data['accessToken'];
         currentUser = data['user'];
 
         await _storage.write(key: 'jwt_token', value: _accessToken);
-
+        await _storage.write(key: 'private_key', value: privateKey);
       } catch(e) {
 
         print("Error generating user: $e");
         rethrow;
       }
     } 
+
+    // Private key for message descryption
+    Future<String?> getPrivateKey() async {
+      return await _storage.read(key: 'private_key');
+    }
 
     // logout
     Future <void> logout() async {
@@ -118,16 +130,20 @@ class ApiService {
     }
 
     // create new room 
-    Future <Map<String, dynamic>> createRoom({
-      String expiresIn = "1d"
-    }) async {
+    Future<Map<String, dynamic>> createRoom({String expiresIn = "1d"}) async {
+    final roomKey = await CryptoService.generateRoomKey();
 
-      final response = await dio.post('/room/create',data: {
-        "expires_in": expiresIn,
-      });
-      return response.data['data'];
+    final response = await dio.post('/room/create', data: {
+      "expires_in": expiresIn,
+    });
 
-    }
+    final roomData = response.data['data'];
+    final String roomId = roomData['id'];
+
+    await saveRoomKey(roomId, roomKey);
+
+    return roomData;
+  }
 
     // Join existing room 
     Future <Map<String, dynamic>> joinRoom( String roomCode ) async {
@@ -189,5 +205,14 @@ class ApiService {
       });
       return response.data['data']['messages'] ?? [];
 
+    }
+
+    // Save AES room locally
+    Future<void> saveRoomKey(String roomId, String roomKey) async {
+      await _storage.write(key: 'room_key_$roomId', value: roomKey);
+    }
+    // Retrieve Room AES Key locally
+    Future<String?> getRoomKey(String roomId) async {
+      return await _storage.read(key: 'room_key_$roomId');
     }
 }

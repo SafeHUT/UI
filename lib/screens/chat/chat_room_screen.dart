@@ -7,6 +7,8 @@ import 'package:ui/screens/browser/browse_screen.dart';
 import '../../services/api_service.dart';
 import 'room_details_screen.dart';
 import 'dart:async';
+import '../../services/crypto_service.dart';
+import 'dart:isolate';
 
 class ChatRoomScreen extends StatefulWidget {
   final Map<String, dynamic> room;
@@ -17,6 +19,7 @@ class ChatRoomScreen extends StatefulWidget {
 }
 
 class _ChatRoomScreenState extends State<ChatRoomScreen> {
+  String? _roomKey;
   final TextEditingController _messageController = TextEditingController(); 
   Color _myBubbleColor = Colors.blueAccent;
   // expire counter
@@ -147,15 +150,22 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             child: const Text("Cancel", style: TextStyle(color: Colors.white54)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
-            onPressed: () {
-              if (editController.text.trim().isNotEmpty) {
+            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary),
+            onPressed: () async { 
+              if (editController.text.trim().isNotEmpty && _roomKey != null) {
+                
+                final encryptedEdit = await CryptoService.encryptMessage(
+                  plaintext: editController.text.trim(),
+                  roomkeyBase64: _roomKey!,
+                );
+
                 _socket!.emit('edit_message', {
                   'messageId': message['id'],
                   'roomId': widget.room['id'],
-                  'newContent': editController.text.trim(),
+                  'newContent': encryptedEdit, 
                 });
-                Navigator.pop(context);
+                
+                if (context.mounted) Navigator.pop(context);
               }
             },
             child: const Text("Save", style: TextStyle(color: Colors.white)),
@@ -200,7 +210,22 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
   Future<void> _loadHistory() async {
     try {
+      _roomKey = await ApiService().getRoomKey(widget.room['id']);
+
+      if (_roomKey == null) {
+        if (mounted) setState(() => _isLoading = false);
+        return; 
+      }
+
       final pastMessages = await ApiService().getRoomMessages(widget.room['id']);
+      
+      for (var msg in pastMessages) {
+        msg['content'] = await CryptoService.decryptMessage(
+          encryptedPayload: msg['content'],
+          roomkeyBase64: _roomKey!,
+        );
+      }
+
       if (mounted) {
         setState(() {
           _messages = pastMessages;
@@ -208,7 +233,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         });
       }
     } catch (e) {
-      print("Failed to load history: $e");
+      debugPrint("Failed to load history: $e");
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -217,7 +242,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     final String serverUrl = ApiService().baseUrl.replaceAll('/api/v1', '');
     
     _socket = IO.io(serverUrl, IO.OptionBuilder()
-      .setTransports(['websocket'])
       .setAuth({'token': ApiService().currentToken}) 
       .disableAutoConnect()
       .build()
@@ -230,7 +254,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       _socket!.emit('join_room', widget.room['id']);
     });
 
-    _socket!.on('receive_message', (data) {
+    _socket!.on('receive_message', (data) async {
+      if (_roomKey != null) {
+        data['content'] = await CryptoService.decryptMessage(
+          encryptedPayload: data['content'],
+          roomkeyBase64: _roomKey!,
+        );
+      }
       if (mounted) {
         setState(() {
           _messages.insert(0, data); 
@@ -258,7 +288,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       }
     });
 
-    _socket!.on('message_edited', (updatedMsg) {
+    _socket!.on('message_edited', (updatedMsg) async {
+      if (_roomKey != null) {
+        updatedMsg['content'] = await CryptoService.decryptMessage(
+          encryptedPayload: updatedMsg['content'],
+          roomkeyBase64: _roomKey!,
+        );
+      }
       if (mounted) {
         setState(() {
           final index = _messages.indexWhere((msg) => msg['id'] == updatedMsg['id']);
@@ -268,15 +304,79 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         });
       }
     });
-  }
+    _socket!.on('new_user_joined', (data) async {
+      if (_roomKey != null) {
+        final targetUserId = data['userId'];
+        final targetPublicKey = data['publicKey']; 
+        
+        final myPrivateKey = await ApiService().getPrivateKey();
+        
+        final wrappedKey = await CryptoService.wrapRoomKey(
+          myPrivateKeyBase64: myPrivateKey!,
+          theirPublicKeyBase64: targetPublicKey,
+          roomKeyBase64: _roomKey!,
+        );
 
-  void _sendMessage() {
+        _socket!.emit('share_room_key', {
+          'roomId': widget.room['id'],
+          'targetUserId': targetUserId,
+          'wrappedKey': wrappedKey,
+        });
+      }
+    });
+
+    _socket!.on('receive_room_key', (data) async {
+      if (_roomKey == null) {
+        final senderPublicKey = data['senderPublicKey'];
+        final wrappedKey = data['wrappedKey'];
+        
+        final myPrivateKey = await ApiService().getPrivateKey();
+
+        try {
+          final unwrappedRoomKey = await CryptoService.unwrapRoomKey(
+            myPrivateKeyBase64: myPrivateKey!,
+            theirPublicKeyBase64: senderPublicKey,
+            wrappedKeyPayload: wrappedKey,
+          );
+
+          await ApiService().saveRoomKey(widget.room['id'], unwrappedRoomKey);
+          
+          if (mounted) {
+            setState(() {
+              _roomKey = unwrappedRoomKey;
+              _loadHistory(); 
+            });
+            
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("🔒 Room Key received. Connection secure.")),
+            );
+          }
+        } catch (e) {
+          debugPrint("Failed to unwrap room key.");
+        }
+      }
+    });
+  }
+  void _sendMessage() async {
     final text = _messageController.text.trim();
-    if (text.isNotEmpty && _socket != null) {
+    
+    if (text.isNotEmpty && _socket != null && _roomKey != null) {
+      
+      final String currentText = text;
+      final String currentKey = _roomKey!;
+
+      final encryptedText = await Isolate.run(() async {
+        return await CryptoService.encryptMessage(
+          plaintext: currentText,
+          roomkeyBase64: currentKey,
+        );
+      });
+
       _socket!.emit('send_message', {
         'roomId': widget.room['id'],
-        'content': text,
+        'content': encryptedText, 
       });
+      
       _messageController.clear();
       if (_isMeTyping) {
         _isMeTyping = false;
@@ -374,7 +474,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                             if (!isMe) const SizedBox(height: 2),
                           Linkify(
                             onOpen: (link) {
-                              // Push the private browser on top of the chat room
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
