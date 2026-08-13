@@ -242,6 +242,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     final String serverUrl = ApiService().baseUrl.replaceAll('/api/v1', '');
     
     _socket = IO.io(serverUrl, IO.OptionBuilder()
+      .setTransports(['websocket'])
       .setAuth({'token': ApiService().currentToken}) 
       .disableAutoConnect()
       .build()
