@@ -77,7 +77,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       setState(() {
         if (difference.isNegative) {
           _timeLeft = "Expired";
-          // Optional: You could even trigger Navigator.pop(context) here to auto-kick them!
         } else {
           final hours = difference.inHours;
           final minutes = difference.inMinutes.remainder(60);
@@ -85,7 +84,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           if (hours > 0) {
             _timeLeft = "${hours}h ${minutes}m left";
           } else {
-            _timeLeft = "${minutes}m left"; // Only show minutes if under an hour
+            _timeLeft = "${minutes}m left"; 
           }
         }
       });
